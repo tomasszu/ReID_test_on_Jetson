@@ -148,8 +148,11 @@ with torch.no_grad():
     query_feature, query_labels = extract_feature(
         model, dataloaders['query'], device, ms)
     print("RAM Memory after inference: {:.2f} MB".format(get_memory_usage() / 1024 / 1024))
+    print("Inference Memory Usage:")
+    print_gpu_memory()
     gallery_feature, gallery_labels = extract_feature(
         model, dataloaders['gallery'], device, ms)
+    
     
     
 
