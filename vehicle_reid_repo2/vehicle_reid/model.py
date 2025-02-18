@@ -3,7 +3,6 @@ import torch.nn as nn
 from torch.nn import init
 from torchvision import models
 from torch.autograd import Variable
-import timm
 from tool.mixstyle import MixStyle
 
 ######################################################################
@@ -123,49 +122,6 @@ class ft_net(nn.Module):
         return x
 
 
-# Define the swin_base_patch4_window7_224 Model
-class ft_net_swin(nn.Module):
-    def __init__(self, class_num, droprate=0.5, circle=False, linear_num=512, **kwargs):
-        super(ft_net_swin, self).__init__()
-        model_ft = timm.create_model(
-            'swin_base_patch4_window7_224', pretrained=True, drop_rate=droprate)
-        model_ft.head = nn.Sequential()
-        self.model = model_ft
-        self.circle = circle
-        self.avgpool = nn.AdaptiveAvgPool1d(1)
-        self.classifier = ClassBlock(
-            1024, class_num, droprate, linear=linear_num, return_f=circle)
-
-    def forward(self, x):
-        x = self.model.forward_features(x)
-        x = self.avgpool(x.permute(0, 2, 1))
-        x = x.squeeze(2)
-        x = self.classifier(x)
-        return x
-
-    
-# Define the HRNet18-based Model
-class ft_net_hr(nn.Module):
-    def __init__(self, class_num, droprate=0.5, circle=False, linear_num=512):
-        super().__init__()
-        model_ft = timm.create_model('hrnet_w18', pretrained=True)
-        # avg pooling to global pooling
-        #model_ft.avgpool = nn.AdaptiveAvgPool2d((1,1))
-        model_ft.classifier = nn.Sequential()  # save memory
-        self.model = model_ft
-        self.circle = circle
-        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        self.classifier = ClassBlock(
-            2048, class_num, droprate, linear=linear_num, return_f=circle)
-
-    def forward(self, x):
-        x = self.model.forward_features(x)
-        x = self.avgpool(x)
-        x = x.view(x.size(0), x.size(1))
-        x = self.classifier(x)
-        return x
-
-
 # Define the DenseNet121-based Model
 class ft_net_dense(nn.Module):
 
@@ -224,30 +180,6 @@ class ft_net_efficient(nn.Module):
         x = self.classifier(x)
         return x
 
-
-# Define the NAS-based Model
-class ft_net_NAS(nn.Module):
-
-    def __init__(self, class_num, droprate=0.5, circle=False, linear_num=512):
-        super().__init__()
-
-        # hotfix for expired certificate of https://data.lip6.fr/
-        import ssl
-        ssl._create_default_https_context = ssl._create_unverified_context
-        
-        model_ft = timm.create_model("nasnetalarge", pretrained=True,
-                                     drop_rate=droprate)
-        model_ft.global_pool = nn.AdaptiveAvgPool2d((1, 1))
-        model_ft.last_linear = nn.Sequential()
-        self.model = model_ft
-        self.classifier = ClassBlock(
-            4032, class_num, droprate, linear=linear_num, return_f=circle)
-
-    def forward(self, x):
-        x = self.model(x)
-        x = x.view(x.size(0), x.size(1))
-        x = self.classifier(x)
-        return x
 
 # Define the ResNet50-based Model (Middle-Concat)
 # In the spirit of "The Devil is in the Middle: Exploiting Mid-level Representations for Cross-Domain Instance Matching." Yu, Qian, et al. arXiv:1711.08106 (2017).
