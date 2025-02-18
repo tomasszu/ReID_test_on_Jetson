@@ -7,7 +7,7 @@ import sys
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(SCRIPT_DIR)
 
-from model import ft_net, ft_net_dense, ft_net_hr, ft_net_swin, ft_net_efficient, ft_net_NAS, PCB
+from model import ft_net, ft_net_dense, ft_net_efficient, PCB
 
 sys.path.remove(SCRIPT_DIR)
 
