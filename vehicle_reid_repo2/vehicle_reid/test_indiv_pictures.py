@@ -15,6 +15,22 @@ from torchvision import transforms
 import pandas as pd
 import psutil
 import random
+import numpy as np
+import json
+import paho.mqtt.client as mqtt
+
+# Define MQTT broker settings
+MQTT_BROKER = "test.mosquitto.org"  # Using the public broker
+MQTT_PORT = 1883
+MQTT_TOPIC = "tomass/feature_vector"
+
+# Function to publish vector
+def publish_vector(client, vector):
+    vector_list = vector.tolist()  # Convert NumPy array to list
+    payload = json.dumps({"query_feature": vector_list})  # Convert to JSON
+
+    client.publish(MQTT_TOPIC, payload)
+    print(f"Published vector to {MQTT_TOPIC}")
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(SCRIPT_DIR)
@@ -78,6 +94,10 @@ def extract_feature(model, X, device="cuda"):
     return feature.div(fnorm)
 
 print("RAM Memory before inference: {:.2f} MB".format(get_memory_usage() / 1024 / 1024))
+
+# MQTT Setup
+client = mqtt.Client()
+client.connect(MQTT_BROKER, MQTT_PORT, 60)
 
 
 use_gpu = torch.cuda.is_available()
@@ -149,16 +169,23 @@ with torch.no_grad():
             image, _ = image_datasets[random.choice(range(0,2000))]
             since = time.time()
 
-            query_feature = extract_feature(
-            model, image , device)
+            query_feature = extract_feature(model, image , device)
             time_elapsed = time.time() - since
             print('Complete in {}ms'.format(
              time_elapsed * 1000))
             print("RAM Memory after inference: {:.2f} MB".format(get_memory_usage() / 1024 / 1024))
             print("Inference Memory Usage:")
             print_gpu_memory()
+
+            # ------------- SŪTAM UZ MQTT
+
+            publish_vector(client, query_feature)
+
+
     except KeyboardInterrupt:
         pass
+
+client.disconnect()
 
 print("Last features = ")
 print(query_feature)
